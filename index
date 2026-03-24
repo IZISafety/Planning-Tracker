@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IZI Safety – Planning Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f0f4f8; color: #1a1a2e; }
+
+  header {
+    background: linear-gradient(135deg, #1F3864, #2E5FA3);
+    color: white; padding: 20px 32px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  header h1 { font-size: 18px; font-weight: 700; }
+  header span { font-size: 12px; opacity: 0.8; }
+
+  .tabs { display: flex; background: #1F3864; padding: 0 32px; }
+  .tab {
+    padding: 12px 24px; cursor: pointer; color: rgba(255,255,255,0.6);
+    font-size: 13px; font-weight: 600; border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab.active { color: white; border-bottom-color: #F4B942; }
+  .tab:hover { color: white; }
+
+  .container { padding: 24px 32px; }
+
+  /* SUMMARY CARDS */
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .card {
+    background: white; border-radius: 8px; padding: 16px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07); border-left: 4px solid #2E5FA3;
+  }
+  .card .label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+  .card .value { font-size: 28px; font-weight: 700; color: #1F3864; margin-top: 4px; }
+  .card.green { border-left-color: #70AD47; } .card.green .value { color: #4a7a2e; }
+  .card.orange { border-left-color: #F4B942; } .card.orange .value { color: #c8912a; }
+  .card.red { border-left-color: #C00000; } .card.red .value { color: #C00000; }
+
+  /* GANTT */
+  .gantt-wrap { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 24px; }
+  .gantt-wrap h2 { font-size: 14px; color: #1F3864; margin-bottom: 16px; font-weight: 700; }
+  .gantt-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .gantt-table th { background: #2E5FA3; color: white; padding: 8px 6px; text-align: center; font-weight: 600; }
+  .gantt-table th.left { text-align: left; padding-left: 12px; }
+  .gantt-table td { padding: 6px; border-bottom: 1px solid #e8ecf0; }
+  .gantt-table tr:last-child td { border-bottom: none; }
+  .gantt-table tr:nth-child(even) td { background: #f7f9fc; }
+  .gantt-bar { background: #2E5FA3; color: white; text-align: center; border-radius: 4px; padding: 4px 0; font-size: 11px; font-weight: 600; }
+  .gantt-empty { background: transparent; }
+
+  /* STATUS BADGE */
+  .badge {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 600;
+  }
+  .badge.not-started { background: #f0f0f0; color: #666; }
+  .badge.in-progress { background: #fff3cd; color: #856404; }
+  .badge.completed { background: #d4edda; color: #155724; }
+  .badge.pending { background: #e2eaff; color: #2E5FA3; }
+
+  /* DETAIL TABLE */
+  .detail-wrap { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+  .detail-wrap h2 { font-size: 14px; color: #1F3864; margin-bottom: 16px; font-weight: 700; }
+  .filters { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .filters select, .filters input {
+    border: 1px solid #ddd; border-radius: 6px; padding: 7px 12px;
+    font-size: 12px; color: #333; background: white;
+  }
+  .detail-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .detail-table th { background: #2E5FA3; color: white; padding: 10px 12px; text-align: left; font-weight: 600; position: sticky; top: 0; }
+  .detail-table td { padding: 9px 12px; border-bottom: 1px solid #eef0f3; vertical-align: middle; }
+  .detail-table tr:hover td { background: #f0f4ff; }
+  .detail-table tr:nth-child(even) td { background: #f7f9fc; }
+  .detail-table tr:nth-child(even):hover td { background: #f0f4ff; }
+
+  .region-tag {
+    display: inline-block; background: #e8eef8; color: #2E5FA3;
+    padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 11px;
+  }
+  .step-check { cursor: pointer; font-size: 16px; text-align: center; user-select: none; }
+  .step-check.done { color: #70AD47; }
+  .step-check.pending { color: #ccc; }
+
+  /* Progress bar */
+  .prog-wrap { background: #eef0f3; border-radius: 4px; height: 6px; width: 80px; display: inline-block; vertical-align: middle; }
+  .prog-bar { height: 6px; border-radius: 4px; background: #2E5FA3; transition: width 0.3s; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .legend { display: flex; gap: 16px; font-size: 11px; margin-bottom: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>IZI Safety — Harmonisation des Profils Utilisateurs</h1>
+    <span>Planning Tracker | Calendrier : 01/04/2026 – 31/12/2026</span>
+  </div>
+  <div style="text-align:right; font-size:12px; opacity:0.8;">
+    45 filiales · 8 régions · 9 mois
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('summary')">Vue Générale</div>
+  <div class="tab" onclick="switchTab('detail')">Détail par Filiale</div>
+</div>
+
+<div class="container">
+
+  <!-- SUMMARY TAB -->
+  <div class="tab-panel active" id="tab-summary">
+    <div class="cards">
+      <div class="card"><div class="label">Total Filiales</div><div class="value">45</div></div>
+      <div class="card green"><div class="label">Complétées</div><div class="value" id="cnt-done">0</div></div>
+      <div class="card orange"><div class="label">En cours</div><div class="value" id="cnt-progress">0</div></div>
+      <div class="card"><div class="label">Non démarrées</div><div class="value" id="cnt-pending">45</div></div>
+    </div>
+
+    <div class="gantt-wrap">
+      <h2>Planning Général – Vue Gantt par Région</h2>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#2E5FA3"></div> Période active</div>
+      </div>
+      <table class="gantt-table">
+        <thead>
+          <tr>
+            <th class="left" style="width:130px">Région</th>
+            <th style="width:50px"># Fil.</th>
+            <th>Avr.</th><th>Mai</th><th>Juin</th><th>Juil.</th>
+            <th>Août</th><th>Sept.</th><th>Oct.</th><th>Nov.</th><th>Déc.</th>
+            <th style="width:100px">Statut</th>
+          </tr>
+        </thead>
+        <tbody id="gantt-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- DETAIL TAB -->
+  <div class="tab-panel" id="tab-detail">
+    <div class="detail-wrap">
+      <h2>Suivi Détaillé par Filiale</h2>
+      <div class="filters">
+        <select id="filter-region" onchange="renderDetail()">
+          <option value="">Toutes les régions</option>
+        </select>
+        <input type="text" id="filter-search" placeholder="Rechercher une filiale…" oninput="renderDetail()">
+        <select id="filter-status" onchange="renderDetail()">
+          <option value="">Tous les statuts</option>
+          <option value="not-started">Non démarré</option>
+          <option value="in-progress">En cours</option>
+          <option value="completed">Complété</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="detail-table">
+          <thead>
+            <tr>
+              <th>Région</th>
+              <th>Filiale</th>
+              <th>Période</th>
+              <th title="Étape 1 – Communication initiale à la filiale">Étape 1</th>
+              <th title="Étape 3 – Réunion avec administrateurs">Étape 3</th>
+              <th title="Étape 5 – Mise à jour des profils">Étape 5</th>
+              <th title="Étape 6 – Communication de clôture">Étape 6</th>
+              <th>Progression</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody id="detail-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const REGIONS = [
+  { name:"AFR/AFO",  count:8,  start:0, end:0, subs:["Ghana","Togo","Guinée Conakry","Cameroun","Sénégal","Côte d'Ivoire","Gabon","Guinée Equatoriale"] },
+  { name:"AFR/MOI",  count:8,  start:1, end:1, subs:["Tunisie","Maurice","Maroc","Algérie","Egypte","Ethiopie","Madagascar","Mozambique"] },
+  { name:"AFR/NG",   count:1,  start:2, end:2, subs:["Nigéria"] },
+  { name:"AFR/ACE",  count:8,  start:2, end:3, subs:["Malawi","Zambie","RDC","Congo","Ouganda","Kenya","Tanzanie","Zimbabwe"] },
+  { name:"AFR/ASNE", count:2,  start:4, end:4, subs:["Afrique du Sud","Namibie"] },
+  { name:"APMO",     count:5,  start:5, end:6, subs:["Cambodge","Fidji","Inde","Jordanie","Liban"] },
+  { name:"EOMC",     count:7,  start:6, end:7, subs:["Caraïbes","Rép. Dominicaine","Polynésie","Jamaïque","Mayotte","Porto Rico","Réunion"] },
+  { name:"LUB",      count:6,  start:7, end:8, subs:["Argentine","Brésil","Chili","Mexique","TEAFS","USA"] },
+];
+
+const MONTHS_SHORT = ["Avr.","Mai","Juin","Juil.","Août","Sept.","Oct.","Nov.","Déc."];
+const MONTHS_FULL  = ["Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+// State: steps per subsidiary
+const state = {};
+REGIONS.forEach(r => r.subs.forEach(s => {
+  state[`${r.name}|${s}`] = [false, false, false, false];
+}));
+
+function getStatus(steps) {
+  const done = steps.filter(Boolean).length;
+  if (done === 0) return "not-started";
+  if (done === 4) return "completed";
+  return "in-progress";
+}
+
+function statusBadge(st) {
+  const labels = { "not-started":"Non démarré", "in-progress":"En cours", "completed":"Complété" };
+  return `<span class="badge ${st}">${labels[st]}</span>`;
+}
+
+function updateSummaryCards() {
+  let done=0, prog=0, pend=0;
+  Object.values(state).forEach(steps => {
+    const st = getStatus(steps);
+    if (st==="completed") done++;
+    else if (st==="in-progress") prog++;
+    else pend++;
+  });
+  document.getElementById("cnt-done").textContent = done;
+  document.getElementById("cnt-progress").textContent = prog;
+  document.getElementById("cnt-pending").textContent = pend;
+}
+
+function renderGantt() {
+  const tbody = document.getElementById("gantt-body");
+  tbody.innerHTML = "";
+  REGIONS.forEach(r => {
+    const tr = document.createElement("tr");
+    let cells = `<td style="font-weight:700;color:#1F3864;padding-left:12px">${r.name}</td>`;
+    cells += `<td style="text-align:center">${r.count}</td>`;
+    for (let m=0; m<9; m++) {
+      if (m >= r.start && m <= r.end) {
+        if (m === r.start) {
+          const span = r.end - r.start + 1;
+          cells += `<td colspan="${span}"><div class="gantt-bar">${r.name}</div></td>`;
+          m = r.end;
+        }
+      } else {
+        cells += `<td class="gantt-empty"></td>`;
+      }
+    }
+    // count completed
+    let done = 0;
+    r.subs.forEach(s => { if (getStatus(state[`${r.name}|${s}`]) === "completed") done++; });
+    const pct = Math.round(done/r.count*100);
+    cells += `<td style="text-align:center">
+      <div style="font-size:11px;color:#555;margin-bottom:3px">${done}/${r.count}</div>
+      <div class="prog-wrap"><div class="prog-bar" style="width:${pct}%"></div></div>
+    </td>`;
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderDetail() {
+  const filterRegion = document.getElementById("filter-region").value;
+  const filterSearch = document.getElementById("filter-search").value.toLowerCase();
+  const filterStatus = document.getElementById("filter-status").value;
+
+  const tbody = document.getElementById("detail-body");
+  tbody.innerHTML = "";
+
+  REGIONS.forEach(r => {
+    if (filterRegion && filterRegion !== r.name) return;
+    r.subs.forEach(sub => {
+      if (filterSearch && !sub.toLowerCase().includes(filterSearch)) return;
+      const key = `${r.name}|${sub}`;
+      const steps = state[key];
+      const st = getStatus(steps);
+      if (filterStatus && filterStatus !== st) return;
+
+      const done = steps.filter(Boolean).length;
+      const pct = Math.round(done/4*100);
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><span class="region-tag">${r.name}</span></td>
+        <td style="font-weight:600">${sub}</td>
+        <td style="color:#555">${MONTHS_FULL[r.start]}${r.start!==r.end?' – '+MONTHS_FULL[r.end]:''}</td>
+        ${[0,1,2,3].map(i => `
+          <td class="step-check ${steps[i]?'done':'pending'}"
+              onclick="toggleStep('${key}',${i})"
+              title="Cliquer pour marquer ${steps[i]?'non fait':'fait'}">
+            ${steps[i]?'✅':'⬜'}
+          </td>`).join('')}
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="prog-wrap"><div class="prog-bar" style="width:${pct}%"></div></div>
+            <span style="font-size:11px;color:#555">${pct}%</span>
+          </div>
+        </td>
+        <td>${statusBadge(st)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  });
+}
+
+function toggleStep(key, stepIdx) {
+  state[key][stepIdx] = !state[key][stepIdx];
+  updateSummaryCards();
+  renderGantt();
+  renderDetail();
+}
+
+function switchTab(tab) {
+  document.querySelectorAll(".tab").forEach((t,i) => t.classList.toggle("active", ["summary","detail"][i]===tab));
+  document.querySelectorAll(".tab-panel").forEach(p => p.classList.toggle("active", p.id===`tab-${tab}`));
+}
+
+// Init filter dropdown
+function initFilters() {
+  const sel = document.getElementById("filter-region");
+  REGIONS.forEach(r => {
+    const opt = document.createElement("option");
+    opt.value = r.name; opt.textContent = r.name;
+    sel.appendChild(opt);
+  });
+}
+
+initFilters();
+updateSummaryCards();
+renderGantt();
+renderDetail();
+</script>
+</body>
+</html>
